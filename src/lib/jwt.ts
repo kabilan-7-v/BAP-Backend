@@ -36,14 +36,17 @@ export async function verifyToken(token: string): Promise<TokenPayload | null> {
 export function createAuthCookie(token: string): string {
   const maxAge = 60 * 60 * 24 * 7; // 7 days
   const secure = process.env.NODE_ENV === 'production';
-  return `${COOKIE_NAME}=${token}; HttpOnly; Path=/; Max-Age=${maxAge}; SameSite=Lax${secure ? '; Secure' : ''}`;
+  // Use SameSite=None for cross-origin requests (requires Secure in production)
+  return `${COOKIE_NAME}=${token}; HttpOnly; Path=/; Max-Age=${maxAge}; SameSite=${secure ? 'None' : 'Lax'}${secure ? '; Secure' : ''}`;
 }
 
 export function setAuthCookieOnResponse<T>(response: NextResponse<T>, token: string): NextResponse<T> {
+  const isProduction = process.env.NODE_ENV === 'production';
   response.cookies.set(COOKIE_NAME, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    secure: isProduction,
+    // Use SameSite=None for cross-origin requests (requires Secure in production)
+    sameSite: isProduction ? 'none' : 'lax',
     maxAge: 60 * 60 * 24 * 7, // 7 days
     path: '/',
   });

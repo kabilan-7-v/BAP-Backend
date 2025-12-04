@@ -8,13 +8,28 @@ export interface AuthenticatedRequest extends NextRequest {
   userData?: IUser;
 }
 
+// Helper to extract token from cookie or Authorization header
+function getTokenFromRequest(request: NextRequest): string | null {
+  // Try cookie first
+  const cookieToken = request.cookies.get('auth_token')?.value;
+  if (cookieToken) return cookieToken;
+
+  // Fallback to Authorization header
+  const authHeader = request.headers.get('authorization');
+  if (authHeader?.startsWith('Bearer ')) {
+    return authHeader.slice(7);
+  }
+
+  return null;
+}
+
 export async function withAuth(
   request: NextRequest,
   handler: (req: AuthenticatedRequest) => Promise<NextResponse>
 ): Promise<NextResponse> {
   try {
-    // Get token from cookie
-    const token = request.cookies.get('auth_token')?.value;
+    // Get token from cookie or Authorization header
+    const token = getTokenFromRequest(request);
 
     if (!token) {
       return NextResponse.json(
@@ -60,8 +75,8 @@ export async function withAuthAndUser(
   handler: (req: AuthenticatedRequest, user: IUser) => Promise<NextResponse>
 ): Promise<NextResponse> {
   try {
-    // Get token from cookie
-    const token = request.cookies.get('auth_token')?.value;
+    // Get token from cookie or Authorization header
+    const token = getTokenFromRequest(request);
 
     if (!token) {
       return NextResponse.json(
