@@ -39,7 +39,7 @@ export function createAuthCookie(token: string): string {
   return `${COOKIE_NAME}=${token}; HttpOnly; Path=/; Max-Age=${maxAge}; SameSite=Lax${secure ? '; Secure' : ''}`;
 }
 
-export function setAuthCookieOnResponse(response: NextResponse, token: string): NextResponse {
+export function setAuthCookieOnResponse<T>(response: NextResponse<T>, token: string): NextResponse<T> {
   response.cookies.set(COOKIE_NAME, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
