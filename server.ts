@@ -38,7 +38,13 @@ app.prepare().then(async () => {
   // Initialize Socket.IO with CORS
   const io = new SocketIOServer(server, {
     cors: {
-      origin: [FRONTEND_URL, 'http://localhost:3000', 'http://127.0.0.1:3000'],
+      origin: [
+        FRONTEND_URL,
+        'http://localhost:3000',
+        'http://localhost:3001',
+        'http://127.0.0.1:3000',
+        'https://bap-workspace-0g6i.onrender.com',
+      ],
       methods: ['GET', 'POST'],
       credentials: true,
     },
