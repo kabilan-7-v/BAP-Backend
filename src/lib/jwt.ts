@@ -55,7 +55,7 @@ export function getAuthCookieFromRequest(request: NextRequest): string | null {
   return cookie?.value || null;
 }
 
-export function removeAuthCookieOnResponse(response: NextResponse): NextResponse {
+export function removeAuthCookieOnResponse<T>(response: NextResponse<T>): NextResponse<T> {
   response.cookies.delete(COOKIE_NAME);
   return response;
 }
