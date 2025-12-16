@@ -109,8 +109,7 @@ const userSchema = new Schema<IUser, UserModel, IUserMethods>(
   }
 );
 
-// Index for faster lookups
-userSchema.index({ email: 1 });
+// Index for faster lookups (email index already created by unique: true)
 userSchema.index({ provider: 1, providerId: 1 });
 
 // Hash password before saving

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
+import '@/models'; 
 import Chat from '@/models/Chat';
 import User from '@/models/User';
 import { withAuthAndUser } from '@/middleware/auth';
