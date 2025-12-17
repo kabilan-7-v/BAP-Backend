@@ -1,12 +1,17 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import User from '@/models/User';
 import { getAuthenticatedUser } from '@/lib/jwt';
 import { formatUserResponse } from '@/utils/helpers';
 import { ApiResponse, UserResponse } from '@/types';
 
-export async function GET(): Promise<NextResponse<ApiResponse<UserResponse>>> {
+export async function GET(request: NextRequest): Promise<NextResponse<ApiResponse<UserResponse>>> {
   try {
+    // Debugging: log incoming origin and cookie header so we can see whether
+    // the browser sent the auth cookie with the request.
+    console.info('GET /api/auth/me - Origin:', request.headers.get('origin'));
+    console.info('GET /api/auth/me - Cookie header:', request.headers.get('cookie'));
+
     const tokenPayload = await getAuthenticatedUser();
 
     if (!tokenPayload) {
