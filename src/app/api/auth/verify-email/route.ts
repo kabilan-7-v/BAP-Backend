@@ -59,7 +59,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
     response.cookies.set('auth_token', jwtToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       maxAge: 7 * 24 * 60 * 60, // 7 days
       path: '/',
     });

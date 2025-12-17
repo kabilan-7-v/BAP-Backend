@@ -15,7 +15,7 @@ import { initializeSocketHandlers } from './src/socket';
 
 const dev = process.env.NODE_ENV !== 'production';
 const port = parseInt(process.env.PORT || '3001', 10);
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000'||'https://bap-workspace.vercel.app';
 
 const app = next({ dev, port });
 const handle = app.getRequestHandler();
