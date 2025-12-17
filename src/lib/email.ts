@@ -9,17 +9,29 @@ interface EmailOptions {
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || 'smtp.gmail.com',
   port: parseInt(process.env.SMTP_PORT || '587'),
-  secure: process.env.SMTP_PORT === '465',
+  secure: process.env.SMTP_PORT === '465', // true for 465, false for other ports
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
   },
-  connectionTimeout: 10000,
-  greetingTimeout: 10000,
-  socketTimeout: 10000,
+  // Increased timeouts for cloud platforms
+  connectionTimeout: 30000, // 30 seconds
+  greetingTimeout: 30000,
+  socketTimeout: 30000,
+  // Pool settings
   pool: true,
   maxConnections: 5,
   maxMessages: 100,
+  // Additional Gmail-specific settings
+  requireTLS: true,
+  tls: {
+    // Do not fail on invalid certs
+    rejectUnauthorized: false,
+    minVersion: 'TLSv1.2',
+  },
+  // Debug for troubleshooting
+  debug: process.env.NODE_ENV !== 'production',
+  logger: process.env.NODE_ENV !== 'production',
 });
 
 export async function sendEmail({ to, subject, html }: EmailOptions): Promise<boolean> {
@@ -33,15 +45,36 @@ export async function sendEmail({ to, subject, html }: EmailOptions): Promise<bo
       return true; // Return true for development
     }
 
-    await transporter.sendMail({
-      from: process.env.EMAIL_FROM || 'BAP Workspace <noreply@bap.com>',
-      to,
-      subject,
-      html,
-    });
+    // Retry logic: try up to 3 times
+    let lastError;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        console.log(`Sending email to ${to} (attempt ${attempt}/3)...`);
 
-    console.log('Email sent successfully to:', to);
-    return true;
+        const info = await transporter.sendMail({
+          from: process.env.EMAIL_FROM || 'BAP Workspace <noreply@bap.com>',
+          to,
+          subject,
+          html,
+        });
+
+        console.log('Email sent successfully to:', to);
+        console.log('Message ID:', info.messageId);
+        return true;
+      } catch (error: any) {
+        lastError = error;
+        console.error(`Email attempt ${attempt} failed:`, error.message);
+
+        // If it's a timeout or connection error, wait before retrying
+        if (attempt < 3 && (error.code === 'ETIMEDOUT' || error.code === 'ECONNECTION')) {
+          console.log(`Waiting 2 seconds before retry...`);
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+      }
+    }
+
+    console.error('All email send attempts failed:', lastError);
+    return false;
   } catch (error) {
     console.error('Error sending email:', error);
     return false;
