@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WebRTC Voice Call Test Client</title>
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    h1 {
+      color: #333;
+      margin-bottom: 10px;
+    }
+
+    .subtitle {
+      color: #666;
+      margin-bottom: 30px;
+    }
+
+    .section {
+      margin-bottom: 30px;
+      padding: 20px;
+      background: #f9f9f9;
+      border-radius: 8px;
+    }
+
+    .section h2 {
+      font-size: 18px;
+      margin-bottom: 15px;
+      color: #444;
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 500;
+      color: #555;
+    }
+
+    input[type="text"], input[type="password"] {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      font-size: 14px;
+    }
+
+    button {
+      padding: 10px 20px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+      margin-right: 10px;
+      margin-bottom: 10px;
+    }
+
+    button:hover {
+      background: #0056b3;
+    }
+
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    button.danger {
+      background: #dc3545;
+    }
+
+    button.danger:hover {
+      background: #c82333;
+    }
+
+    button.success {
+      background: #28a745;
+    }
+
+    button.success:hover {
+      background: #218838;
+    }
+
+    .status {
+      padding: 15px;
+      border-radius: 5px;
+      margin-bottom: 15px;
+    }
+
+    .status.connected {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+
+    .status.disconnected {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+
+    .status.calling {
+      background: #fff3cd;
+      color: #856404;
+      border: 1px solid #ffeaa7;
+    }
+
+    .log {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 15px;
+      border-radius: 5px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      max-height: 300px;
+      overflow-y: auto;
+      margin-top: 20px;
+    }
+
+    .log-entry {
+      margin-bottom: 5px;
+      padding: 5px;
+    }
+
+    .log-entry.info {
+      color: #4fc3f7;
+    }
+
+    .log-entry.success {
+      color: #81c784;
+    }
+
+    .log-entry.error {
+      color: #e57373;
+    }
+
+    .log-entry.warning {
+      color: #ffb74d;
+    }
+
+    .incoming-call {
+      background: #fff3cd;
+      padding: 20px;
+      border-radius: 8px;
+      border: 2px solid #ffc107;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .incoming-call h3 {
+      margin-bottom: 15px;
+      color: #856404;
+    }
+
+    audio {
+      display: none;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    .stat-item {
+      background: white;
+      padding: 10px;
+      border-radius: 5px;
+      border: 1px solid #ddd;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 5px;
+    }
+
+    .stat-value {
+      font-size: 20px;
+      font-weight: bold;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>WebRTC Voice Call Test Client</h1>
+    <p class="subtitle">Test your WebRTC voice call implementation</p>
+
+    <!-- Connection Setup -->
+    <div class="section">
+      <h2>1. Connection Setup</h2>
+      <div class="form-group">
+        <label>Backend URL:</label>
+        <input type="text" id="serverUrl" value="http://localhost:3001" placeholder="http://localhost:3001">
+      </div>
+      <div class="form-group">
+        <label>JWT Token:</label>
+        <input type="password" id="jwtToken" placeholder="Paste your JWT token here">
+      </div>
+      <div class="form-group">
+        <label>Chat ID:</label>
+        <input type="text" id="chatId" placeholder="Enter chat ID">
+      </div>
+      <button id="connectBtn">Connect</button>
+      <button id="disconnectBtn" class="danger" disabled>Disconnect</button>
+
+      <div id="connectionStatus" class="status disconnected" style="margin-top: 15px;">
+        Disconnected
+      </div>
+    </div>
+
+    <!-- Incoming Call -->
+    <div id="incomingCallSection" style="display: none;">
+      <div class="incoming-call">
+        <h3>📞 Incoming Call</h3>
+        <p id="callerInfo">From: Unknown</p>
+        <button id="acceptBtn" class="success">Accept Call</button>
+        <button id="rejectBtn" class="danger">Reject Call</button>
+      </div>
+    </div>
+
+    <!-- Call Controls -->
+    <div class="section">
+      <h2>2. Call Controls</h2>
+      <button id="initiateBtn" disabled>Initiate Call</button>
+      <button id="muteBtn" disabled>Toggle Mute</button>
+      <button id="endBtn" class="danger" disabled>End Call</button>
+
+      <div class="stats">
+        <div class="stat-item">
+          <div class="stat-label">Call Status</div>
+          <div class="stat-value" id="callStatus">Idle</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Connection</div>
+          <div class="stat-value" id="rtcStatus">-</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Duration</div>
+          <div class="stat-value" id="callDuration">00:00</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Muted</div>
+          <div class="stat-value" id="muteStatus">No</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Event Log -->
+    <div class="section">
+      <h2>3. Event Log</h2>
+      <button id="clearLogBtn">Clear Log</button>
+      <div id="log" class="log"></div>
+    </div>
+
+    <!-- Hidden audio elements -->
+    <audio id="localAudio" autoplay muted></audio>
+    <audio id="remoteAudio" autoplay></audio>
+  </div>
+
+  <script>
+    // State
+    let socket = null;
+    let peerConnection = null;
+    let localStream = null;
+    let remoteStream = null;
+    let sessionId = null;
+    let isMuted = false;
+    let callStartTime = null;
+    let callDurationInterval = null;
+    let incomingCallData = null;
+
+    // DOM elements
+    const serverUrlInput = document.getElementById('serverUrl');
+    const jwtTokenInput = document.getElementById('jwtToken');
+    const chatIdInput = document.getElementById('chatId');
+    const connectBtn = document.getElementById('connectBtn');
+    const disconnectBtn = document.getElementById('disconnectBtn');
+    const connectionStatus = document.getElementById('connectionStatus');
+    const incomingCallSection = document.getElementById('incomingCallSection');
+    const callerInfo = document.getElementById('callerInfo');
+    const acceptBtn = document.getElementById('acceptBtn');
+    const rejectBtn = document.getElementById('rejectBtn');
+    const initiateBtn = document.getElementById('initiateBtn');
+    const muteBtn = document.getElementById('muteBtn');
+    const endBtn = document.getElementById('endBtn');
+    const clearLogBtn = document.getElementById('clearLogBtn');
+    const logDiv = document.getElementById('log');
+    const callStatus = document.getElementById('callStatus');
+    const rtcStatus = document.getElementById('rtcStatus');
+    const callDurationDiv = document.getElementById('callDuration');
+    const muteStatusDiv = document.getElementById('muteStatus');
+
+    // Logging
+    function log(message, type = 'info') {
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      const timestamp = new Date().toLocaleTimeString();
+      entry.textContent = `[${timestamp}] ${message}`;
+      logDiv.appendChild(entry);
+      logDiv.scrollTop = logDiv.scrollHeight;
+      console.log(`[${type}] ${message}`);
+    }
+
+    // Connect to Socket.IO
+    connectBtn.addEventListener('click', async () => {
+      const serverUrl = serverUrlInput.value;
+      const token = jwtTokenInput.value;
+
+      if (!token) {
+        alert('Please enter a JWT token');
+        return;
+      }
+
+      log('Connecting to server...', 'info');
+
+      socket = io(serverUrl, {
+        auth: { token }
+      });
+
+      socket.on('connect', () => {
+        log('Connected to Socket.IO server', 'success');
+        connectionStatus.textContent = 'Connected';
+        connectionStatus.className = 'status connected';
+        connectBtn.disabled = true;
+        disconnectBtn.disabled = false;
+        initiateBtn.disabled = false;
+
+        // Get WebRTC config
+        socket.emit('webrtc:config:get', ({ config }) => {
+          log('Received WebRTC config', 'success');
+          initializePeerConnection(config);
+        });
+      });
+
+      socket.on('connect_error', (error) => {
+        log(`Connection error: ${error.message}`, 'error');
+      });
+
+      socket.on('disconnect', () => {
+        log('Disconnected from server', 'warning');
+        connectionStatus.textContent = 'Disconnected';
+        connectionStatus.className = 'status disconnected';
+        connectBtn.disabled = false;
+        disconnectBtn.disabled = true;
+        initiateBtn.disabled = true;
+      });
+
+      setupSocketListeners();
+    });
+
+    // Disconnect
+    disconnectBtn.addEventListener('click', () => {
+      if (socket) {
+        socket.disconnect();
+        cleanup();
+      }
+    });
+
+    // Initialize peer connection
+    function initializePeerConnection(config) {
+      peerConnection = new RTCPeerConnection(config);
+
+      peerConnection.onicecandidate = (event) => {
+        if (event.candidate && sessionId) {
+          log('Sending ICE candidate', 'info');
+          socket.emit('webrtc:ice-candidate', {
+            sessionId,
+            targetUserId: incomingCallData?.callerId || chatIdInput.value,
+            candidate: event.candidate,
+            chatId: chatIdInput.value
+          });
+        }
+      };
+
+      peerConnection.ontrack = (event) => {
+        log('Received remote track', 'success');
+        remoteStream = event.streams[0];
+        document.getElementById('remoteAudio').srcObject = remoteStream;
+      };
+
+      peerConnection.onconnectionstatechange = () => {
+        log(`Connection state: ${peerConnection.connectionState}`, 'info');
+        rtcStatus.textContent = peerConnection.connectionState;
+
+        if (peerConnection.connectionState === 'connected') {
+          log('WebRTC connection established!', 'success');
+          startCallDuration();
+        }
+      };
+
+      peerConnection.oniceconnectionstatechange = () => {
+        log(`ICE connection state: ${peerConnection.iceConnectionState}`, 'info');
+      };
+    }
+
+    // Setup socket listeners
+    function setupSocketListeners() {
+      socket.on('call:incoming', (data) => {
+        log(`Incoming call from ${data.callerName}`, 'warning');
+        incomingCallData = data;
+        sessionId = data.sessionId;
+        callerInfo.textContent = `From: ${data.callerName} (${data.callType})`;
+        incomingCallSection.style.display = 'block';
+        callStatus.textContent = 'Ringing';
+      });
+
+      socket.on('call:ringing', (data) => {
+        log('Call is ringing...', 'info');
+        sessionId = data.sessionId;
+        callStatus.textContent = 'Ringing';
+      });
+
+      socket.on('call:accepted', async (data) => {
+        log(`Call accepted by user ${data.acceptedBy}`, 'success');
+        callStatus.textContent = 'Connecting';
+
+        // Create offer
+        const offer = await peerConnection.createOffer();
+        await peerConnection.setLocalDescription(offer);
+
+        socket.emit('webrtc:offer', {
+          sessionId,
+          targetUserId: data.acceptedBy,
+          offer: offer,
+          chatId: chatIdInput.value
+        });
+      });
+
+      socket.on('call:rejected', (data) => {
+        log(`Call rejected: ${data.reason}`, 'warning');
+        callStatus.textContent = 'Rejected';
+        cleanup();
+      });
+
+      socket.on('call:missed', (data) => {
+        log('Call was missed', 'warning');
+        callStatus.textContent = 'Missed';
+        cleanup();
+      });
+
+      socket.on('call:ended', (data) => {
+        log(`Call ended by ${data.endedBy}. Reason: ${data.reason}`, 'info');
+        callStatus.textContent = 'Ended';
+        cleanup();
+      });
+
+      socket.on('webrtc:offer', async (data) => {
+        log('Received WebRTC offer', 'info');
+        await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
+
+        const answer = await peerConnection.createAnswer();
+        await peerConnection.setLocalDescription(answer);
+
+        socket.emit('webrtc:answer', {
+          sessionId: data.sessionId,
+          targetUserId: data.fromUserId,
+          answer: answer,
+          chatId: data.chatId
+        });
+      });
+
+      socket.on('webrtc:answer', async (data) => {
+        log('Received WebRTC answer', 'info');
+        await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+      });
+
+      socket.on('webrtc:ice-candidate', async (data) => {
+        log('Received ICE candidate', 'info');
+        try {
+          await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+        } catch (e) {
+          log(`Error adding ICE candidate: ${e.message}`, 'error');
+        }
+      });
+
+      socket.on('call:participant-audio-toggle', (data) => {
+        log(`User ${data.userId} ${data.muted ? 'muted' : 'unmuted'}`, 'info');
+      });
+    }
+
+    // Initiate call
+    initiateBtn.addEventListener('click', async () => {
+      const chatId = chatIdInput.value;
+      if (!chatId) {
+        alert('Please enter a chat ID');
+        return;
+      }
+
+      try {
+        log('Requesting microphone access...', 'info');
+        localStream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+          },
+          video: false
+        });
+
+        log('Microphone access granted', 'success');
+        document.getElementById('localAudio').srcObject = localStream;
+
+        // Add tracks to peer connection
+        localStream.getTracks().forEach(track => {
+          peerConnection.addTrack(track, localStream);
+        });
+
+        log('Initiating call...', 'info');
+        socket.emit('call:initiate', {
+          chatId,
+          callType: 'voice'
+        }, (response) => {
+          if (response.success) {
+            log(`Call initiated. Session ID: ${response.sessionId}`, 'success');
+            sessionId = response.sessionId;
+            callStatus.textContent = 'Calling';
+            muteBtn.disabled = false;
+            endBtn.disabled = false;
+            initiateBtn.disabled = true;
+          } else {
+            log(`Failed to initiate call: ${response.error}`, 'error');
+          }
+        });
+      } catch (error) {
+        log(`Error accessing microphone: ${error.message}`, 'error');
+      }
+    });
+
+    // Accept call
+    acceptBtn.addEventListener('click', async () => {
+      try {
+        log('Accepting call...', 'info');
+        localStream = await navigator.mediaDevices.getUserMedia({
+          audio: true,
+          video: false
+        });
+
+        document.getElementById('localAudio').srcObject = localStream;
+
+        localStream.getTracks().forEach(track => {
+          peerConnection.addTrack(track, localStream);
+        });
+
+        socket.emit('call:accept', {
+          sessionId,
+          chatId: chatIdInput.value
+        }, (response) => {
+          if (response.success) {
+            log('Call accepted', 'success');
+            incomingCallSection.style.display = 'none';
+            callStatus.textContent = 'Connecting';
+            muteBtn.disabled = false;
+            endBtn.disabled = false;
+          } else {
+            log(`Failed to accept call: ${response.error}`, 'error');
+          }
+        });
+      } catch (error) {
+        log(`Error accepting call: ${error.message}`, 'error');
+      }
+    });
+
+    // Reject call
+    rejectBtn.addEventListener('click', () => {
+      log('Rejecting call...', 'info');
+      socket.emit('call:reject', {
+        sessionId,
+        chatId: chatIdInput.value,
+        reason: 'declined'
+      }, (response) => {
+        if (response.success) {
+          log('Call rejected', 'success');
+          incomingCallSection.style.display = 'none';
+          callStatus.textContent = 'Rejected';
+        }
+      });
+    });
+
+    // Toggle mute
+    muteBtn.addEventListener('click', () => {
+      if (localStream) {
+        const audioTrack = localStream.getAudioTracks()[0];
+        if (audioTrack) {
+          audioTrack.enabled = !audioTrack.enabled;
+          isMuted = !audioTrack.enabled;
+          muteStatusDiv.textContent = isMuted ? 'Yes' : 'No';
+          log(isMuted ? 'Microphone muted' : 'Microphone unmuted', 'info');
+
+          socket.emit('call:toggle-audio', {
+            sessionId,
+            chatId: chatIdInput.value,
+            muted: isMuted
+          });
+        }
+      }
+    });
+
+    // End call
+    endBtn.addEventListener('click', () => {
+      log('Ending call...', 'info');
+      socket.emit('call:end', {
+        sessionId,
+        chatId: chatIdInput.value,
+        reason: 'completed'
+      }, (response) => {
+        if (response.success) {
+          log('Call ended', 'success');
+          cleanup();
+        }
+      });
+    });
+
+    // Call duration tracker
+    function startCallDuration() {
+      callStartTime = Date.now();
+      callDurationInterval = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - callStartTime) / 1000);
+        const minutes = Math.floor(elapsed / 60);
+        const seconds = elapsed % 60;
+        callDurationDiv.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+      }, 1000);
+    }
+
+    // Cleanup
+    function cleanup() {
+      if (callDurationInterval) {
+        clearInterval(callDurationInterval);
+        callDurationInterval = null;
+      }
+
+      if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+        localStream = null;
+      }
+
+      if (peerConnection) {
+        peerConnection.close();
+        // Reinitialize for next call
+        if (socket && socket.connected) {
+          socket.emit('webrtc:config:get', ({ config }) => {
+            initializePeerConnection(config);
+          });
+        }
+      }
+
+      sessionId = null;
+      incomingCallData = null;
+      isMuted = false;
+
+      callStatus.textContent = 'Idle';
+      rtcStatus.textContent = '-';
+      callDurationDiv.textContent = '00:00';
+      muteStatusDiv.textContent = 'No';
+
+      muteBtn.disabled = true;
+      endBtn.disabled = true;
+      initiateBtn.disabled = false;
+      incomingCallSection.style.display = 'none';
+
+      log('Call cleanup complete', 'info');
+    }
+
+    // Clear log
+    clearLogBtn.addEventListener('click', () => {
+      logDiv.innerHTML = '';
+    });
+  </script>
+</body>
+</html>

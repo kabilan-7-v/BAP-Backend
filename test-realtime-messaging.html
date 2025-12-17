@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Real-time Messaging Test</title>
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background: #1e1e1e; color: #fff; }
+    .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .panel { background: #2d2d2d; padding: 20px; border-radius: 8px; border: 2px solid #444; }
+    .panel.connected { border-color: #0f0; }
+    .panel.disconnected { border-color: #f00; }
+    input { width: 100%; padding: 10px; margin: 5px 0; background: #1a1a1a; color: #fff; border: 1px solid #555; border-radius: 4px; }
+    button { padding: 10px 20px; background: #0f0; color: #000; border: none; border-radius: 4px; cursor: pointer; margin: 5px 5px 5px 0; font-weight: bold; }
+    button:hover { background: #0c0; }
+    button.danger { background: #f00; color: #fff; }
+    .status { padding: 10px; margin: 10px 0; border-radius: 4px; }
+    .status.connected { background: #002200; border: 1px solid #0f0; color: #0f0; }
+    .status.disconnected { background: #220000; border: 1px solid #f00; color: #f88; }
+    .messages { background: #000; border: 1px solid #555; height: 300px; overflow-y: auto; padding: 10px; margin: 10px 0; }
+    .message { padding: 8px; margin: 5px 0; border-radius: 4px; }
+    .message.sent { background: #003300; border-left: 3px solid #0f0; }
+    .message.received { background: #003366; border-left: 3px solid #0ff; }
+    .message.system { background: #333; border-left: 3px solid #ff0; color: #ff0; }
+    .info { background: #1a1a2e; padding: 10px; margin: 10px 0; border-radius: 4px; font-size: 12px; }
+    h2 { color: #0f0; margin-bottom: 10px; }
+    h3 { color: #0ff; margin-top: 15px; margin-bottom: 5px; }
+    code { background: #000; padding: 2px 6px; border-radius: 3px; color: #0f0; }
+    @media (max-width: 1200px) { .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1 style="text-align: center; color: #0f0; margin-bottom: 20px;">💬 Real-time Messaging Test</h1>
+    <p style="text-align: center; color: #888; margin-bottom: 20px;">
+      Open this page in TWO browser windows to test real-time messaging
+    </p>
+
+    <div class="grid">
+      <!-- User 1 Panel -->
+      <div class="panel" id="panel1">
+        <h2>👤 User 1 (Sender)</h2>
+
+        <h3>Connection</h3>
+        <input type="text" id="url1" value="http://localhost:3001" placeholder="Server URL">
+        <input type="password" id="token1" placeholder="JWT Token for User 1">
+        <input type="text" id="chatId1" placeholder="Chat ID">
+        <button onclick="connect(1)">🔌 Connect</button>
+        <button onclick="disconnect(1)" class="danger">❌ Disconnect</button>
+
+        <div id="status1" class="status disconnected">Not connected</div>
+
+        <div class="info">
+          Socket ID: <code id="socketId1">-</code><br>
+          User ID: <code id="userId1">-</code><br>
+          Rooms: <code id="rooms1">-</code>
+        </div>
+
+        <h3>Send Message</h3>
+        <input type="text" id="messageInput1" placeholder="Type a message..." onkeypress="if(event.key==='Enter')sendMessage(1)">
+        <button onclick="sendMessage(1)">📤 Send</button>
+
+        <h3>Messages</h3>
+        <div id="messages1" class="messages"></div>
+      </div>
+
+      <!-- User 2 Panel -->
+      <div class="panel" id="panel2">
+        <h2>👤 User 2 (Receiver)</h2>
+
+        <h3>Connection</h3>
+        <input type="text" id="url2" value="http://localhost:3001" placeholder="Server URL">
+        <input type="password" id="token2" placeholder="JWT Token for User 2">
+        <input type="text" id="chatId2" placeholder="Chat ID (same as User 1)">
+        <button onclick="connect(2)">🔌 Connect</button>
+        <button onclick="disconnect(2)" class="danger">❌ Disconnect</button>
+
+        <div id="status2" class="status disconnected">Not connected</div>
+
+        <div class="info">
+          Socket ID: <code id="socketId2">-</code><br>
+          User ID: <code id="userId2">-</code><br>
+          Rooms: <code id="rooms2">-</code>
+        </div>
+
+        <h3>Send Message</h3>
+        <input type="text" id="messageInput2" placeholder="Type a message..." onkeypress="if(event.key==='Enter')sendMessage(2)">
+        <button onclick="sendMessage(2)">📤 Send</button>
+
+        <h3>Messages</h3>
+        <div id="messages2" class="messages"></div>
+      </div>
+    </div>
+
+    <div style="background: #2d2d2d; padding: 20px; margin-top: 20px; border-radius: 8px;">
+      <h2>📋 Instructions</h2>
+      <ol style="line-height: 2; color: #ccc;">
+        <li>Get JWT tokens for 2 different users (from localStorage after login)</li>
+        <li>Get a Chat ID where both users are participants</li>
+        <li>Enter tokens and Chat ID in both panels (same Chat ID!)</li>
+        <li>Click "Connect" in both panels</li>
+        <li>Type message in User 1 and press Enter or click Send</li>
+        <li>User 2 should receive it instantly!</li>
+      </ol>
+
+      <h3>✅ What Should Happen:</h3>
+      <ul style="color: #0f0; line-height: 1.8; margin-top: 10px;">
+        <li>Both panels show "Connected" (green)</li>
+        <li>Both have Socket IDs</li>
+        <li>Both show they joined the chat room</li>
+        <li>Message sent from User 1 appears in User 2's panel instantly</li>
+        <li>Vice versa works too</li>
+      </ul>
+
+      <h3 style="color: #f00;">❌ If It Doesn't Work:</h3>
+      <ul style="color: #f88; line-height: 1.8; margin-top: 10px;">
+        <li>Check server terminal for errors</li>
+        <li>Make sure both users are in the same chat</li>
+        <li>Verify tokens are valid</li>
+        <li>Check Chat ID is correct</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    const sockets = { 1: null, 2: null };
+    const userIds = { 1: null, 2: null };
+
+    function addMessage(panel, text, type = 'system') {
+      const div = document.getElementById('messages' + panel);
+      const msg = document.createElement('div');
+      msg.className = 'message ' + type;
+      msg.innerHTML = `<small>${new Date().toLocaleTimeString()}</small><br>${text}`;
+      div.appendChild(msg);
+      div.scrollTop = div.scrollHeight;
+    }
+
+    async function connect(panel) {
+      const url = document.getElementById('url' + panel).value;
+      const token = document.getElementById('token' + panel).value;
+      const chatId = document.getElementById('chatId' + panel).value;
+
+      if (!token) {
+        alert('Please enter JWT token');
+        return;
+      }
+
+      addMessage(panel, '🔌 Connecting to ' + url, 'system');
+
+      const socket = io(url, {
+        auth: { token },
+        transports: ['websocket', 'polling']
+      });
+
+      sockets[panel] = socket;
+
+      socket.on('connect', async () => {
+        addMessage(panel, '✅ Connected! Socket ID: ' + socket.id, 'system');
+        document.getElementById('status' + panel).textContent = '✅ Connected';
+        document.getElementById('status' + panel).className = 'status connected';
+        document.getElementById('panel' + panel).className = 'panel connected';
+        document.getElementById('socketId' + panel).textContent = socket.id;
+
+        // Get user info
+        const userRes = await fetch(url + '/api/user/me', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const userData = await userRes.json();
+        if (userData.success) {
+          userIds[panel] = userData.data._id;
+          document.getElementById('userId' + panel).textContent = userData.data._id;
+          document.getElementById('rooms' + panel).textContent = `user:${userData.data._id}, chat:${chatId}`;
+          addMessage(panel, `👤 Logged in as: ${userData.data.fullName}`, 'system');
+        }
+
+        // Join chat room
+        if (chatId) {
+          socket.emit('chat:join', { chatId });
+          addMessage(panel, '🚪 Joined chat room: ' + chatId, 'system');
+        }
+      });
+
+      socket.on('connect_error', (err) => {
+        addMessage(panel, '❌ Connection error: ' + err.message, 'system');
+        document.getElementById('status' + panel).textContent = '❌ Error';
+        document.getElementById('status' + panel).className = 'status disconnected';
+      });
+
+      socket.on('disconnect', () => {
+        addMessage(panel, '⚠️ Disconnected', 'system');
+        document.getElementById('status' + panel).textContent = '⚠️ Disconnected';
+        document.getElementById('status' + panel).className = 'status disconnected';
+        document.getElementById('panel' + panel).className = 'panel disconnected';
+      });
+
+      // CRITICAL: Listen for incoming messages
+      socket.on('message:new', (data) => {
+        console.log('Message received:', data);
+        const msg = data.message;
+        const isMine = msg.senderId._id === userIds[panel];
+        addMessage(
+          panel,
+          `<strong>${msg.senderId.fullName}:</strong> ${msg.content}`,
+          isMine ? 'sent' : 'received'
+        );
+
+        // Play a sound or show notification
+        if (!isMine) {
+          new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIFWm98OaZTwwJUKri7K1SYjIUXT7W9r5JNAcdhM3x3IkyBxhp0PTEaC8ME' ></audio>.play().catch(() => {});
+        }
+      });
+
+      socket.on('message:notification', (data) => {
+        addMessage(panel, '🔔 New message notification', 'system');
+      });
+
+      socket.on('chat:joined', (data) => {
+        addMessage(panel, '✅ Chat joined: ' + data.chatId, 'system');
+      });
+
+      socket.on('error', (data) => {
+        addMessage(panel, '❌ Error: ' + JSON.stringify(data), 'system');
+      });
+
+      // Catch all events
+      socket.onAny((event, data) => {
+        console.log(`[Panel ${panel}] Event:`, event, data);
+      });
+    }
+
+    function disconnect(panel) {
+      if (sockets[panel]) {
+        sockets[panel].disconnect();
+        sockets[panel] = null;
+      }
+    }
+
+    function sendMessage(panel) {
+      const socket = sockets[panel];
+      if (!socket || !socket.connected) {
+        alert('Not connected!');
+        return;
+      }
+
+      const chatId = document.getElementById('chatId' + panel).value;
+      const content = document.getElementById('messageInput' + panel).value;
+
+      if (!content) {
+        alert('Please enter a message');
+        return;
+      }
+
+      addMessage(panel, '📤 Sending...', 'system');
+
+      socket.emit('message:send', {
+        chatId,
+        content,
+        attachments: []
+      }, (response) => {
+        if (response.success) {
+          addMessage(panel, `<strong>You:</strong> ${content}`, 'sent');
+          document.getElementById('messageInput' + panel).value = '';
+        } else {
+          addMessage(panel, '❌ Failed: ' + response.error, 'system');
+        }
+      });
+    }
+  </script>
+</body>
+</html>

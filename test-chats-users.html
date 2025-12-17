@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Debug - Chats & Users</title>
+  <style>
+    body { font-family: monospace; padding: 20px; background: #1e1e1e; color: #fff; }
+    .container { max-width: 1000px; margin: 0 auto; }
+    input { width: 100%; padding: 10px; margin: 10px 0; background: #333; color: #fff; border: 1px solid #555; }
+    button { padding: 10px 20px; background: #28a745; color: white; border: none; cursor: pointer; margin: 5px; }
+    pre { background: #000; padding: 15px; overflow-x: auto; border-left: 3px solid #0f0; }
+    .error { border-left-color: #f00; color: #f88; }
+    .success { border-left-color: #0f0; }
+    .warning { border-left-color: #ff0; color: #ff0; }
+    h2 { color: #0f0; border-bottom: 1px solid #444; padding-bottom: 5px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔍 Debug Chats & Users Data</h1>
+
+    <input type="password" id="token" placeholder="Paste your JWT token here">
+    <button onclick="testAll()">🧪 Test All Endpoints</button>
+    <button onclick="clearResults()">Clear</button>
+
+    <div id="results"></div>
+  </div>
+
+  <script>
+    const API_URL = 'http://localhost:3001';
+
+    async function testAll() {
+      const token = document.getElementById('token').value;
+      if (!token) {
+        alert('Please enter your JWT token');
+        return;
+      }
+
+      const results = document.getElementById('results');
+      results.innerHTML = '<h2>Testing...</h2>';
+
+      let html = '';
+
+      // Test 1: Current user
+      html += '<h2>1️⃣ Current User (/api/user/me)</h2>';
+      try {
+        const res = await fetch(`${API_URL}/api/user/me`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+          html += `<pre class="success">Status: ${res.status} OK\n\n${JSON.stringify(data, null, 2)}</pre>`;
+          window.currentUser = data.data;
+        } else {
+          html += `<pre class="error">Status: ${res.status}\n\n${JSON.stringify(data, null, 2)}</pre>`;
+        }
+      } catch (error) {
+        html += `<pre class="error">❌ Error: ${error.message}</pre>`;
+      }
+
+      // Test 2: All users
+      html += '<h2>2️⃣ All Users (/api/users)</h2>';
+      try {
+        const res = await fetch(`${API_URL}/api/users`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+          html += `<pre class="success">Status: ${res.status} OK\nTotal Users: ${data.data.users.length}\n\n${JSON.stringify(data, null, 2)}</pre>`;
+
+          if (data.data.users.length === 0) {
+            html += `<pre class="warning">⚠️ No users found!\n\nThis means:\n- Only you exist in the database\n- Create more users to test calls\n- Use signup page or API to create users</pre>`;
+          }
+        } else {
+          html += `<pre class="error">Status: ${res.status}\n\n${JSON.stringify(data, null, 2)}</pre>`;
+        }
+      } catch (error) {
+        html += `<pre class="error">❌ Error: ${error.message}</pre>`;
+      }
+
+      // Test 3: Chats
+      html += '<h2>3️⃣ Your Chats (/api/chats)</h2>';
+      try {
+        const res = await fetch(`${API_URL}/api/chats`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+          html += `<pre class="success">Status: ${res.status} OK\nTotal Chats: ${data.data.chats.length}\n\n${JSON.stringify(data, null, 2)}</pre>`;
+
+          if (data.data.chats.length === 0) {
+            html += `<pre class="warning">⚠️ No chats found!\n\nTo create a chat:\n1. Use the create-test-chat.js script\n2. Or use your frontend to start a new chat</pre>`;
+          } else {
+            // Check participants
+            html += '<h3>📊 Chat Analysis:</h3>';
+            data.data.chats.forEach((chat, i) => {
+              html += `<pre class="success">Chat ${i + 1} (${chat._id}):\n`;
+              html += `- Type: ${chat.type}\n`;
+              html += `- Participants: ${chat.participants ? chat.participants.length : 'N/A'}\n`;
+
+              if (chat.participants && chat.participants.length > 0) {
+                html += `- Participant Details:\n`;
+                chat.participants.forEach((p, j) => {
+                  html += `  ${j + 1}. ${p.fullName || p.name || 'Unknown'} (${p.email || 'no email'})\n`;
+                });
+              } else {
+                html += `  ⚠️ No participants data! This might be the issue.\n`;
+              }
+              html += '</pre>';
+            });
+          }
+        } else {
+          html += `<pre class="error">Status: ${res.status}\n\n${JSON.stringify(data, null, 2)}</pre>`;
+        }
+      } catch (error) {
+        html += `<pre class="error">❌ Error: ${error.message}</pre>`;
+      }
+
+      // Summary
+      html += '<h2>📋 Summary & Next Steps</h2>';
+      html += '<pre class="success">';
+
+      if (window.currentUser) {
+        html += `✅ You are logged in as: ${window.currentUser.fullName}\n\n`;
+      }
+
+      html += '🎯 What you need for WebRTC calls:\n';
+      html += '1. At least 2 users in the system ✓/✗\n';
+      html += '2. A chat between those users ✓/✗\n';
+      html += '3. Both users must be participants of the same chat ✓/✗\n';
+      html += '4. Both users need valid JWT tokens ✓/✗\n\n';
+
+      html += '📚 If users/chats are missing:\n';
+      html += '- Create users via signup page\n';
+      html += '- Or run: node create-test-chat.js\n';
+      html += '- Or use curl to create users/chats\n';
+      html += '</pre>';
+
+      results.innerHTML = html;
+    }
+
+    function clearResults() {
+      document.getElementById('results').innerHTML = '';
+    }
+
+    // Auto-run if token is in URL
+    window.onload = () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const token = urlParams.get('token');
+      if (token) {
+        document.getElementById('token').value = token;
+        testAll();
+      }
+    };
+  </script>
+</body>
+</html>

@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Socket.IO Connection Debugger</title>
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <style>
+    body { font-family: monospace; padding: 20px; background: #1a1a1a; color: #0f0; }
+    .container { max-width: 900px; margin: 0 auto; }
+    input { width: 100%; padding: 10px; margin: 5px 0; background: #000; color: #0f0; border: 1px solid #0f0; font-family: monospace; }
+    button { padding: 10px 20px; background: #0f0; color: #000; border: none; cursor: pointer; margin: 5px; font-weight: bold; }
+    button.danger { background: #f00; color: #fff; }
+    .box { background: #000; border: 2px solid #0f0; padding: 15px; margin: 10px 0; }
+    .status { padding: 10px; margin: 10px 0; border-left: 4px solid #0f0; background: #002200; }
+    .status.error { border-color: #f00; background: #220000; color: #f88; }
+    .status.warning { border-color: #ff0; background: #222200; color: #ff0; }
+    .log { background: #000; padding: 10px; max-height: 400px; overflow-y: auto; font-size: 11px; border: 1px solid #0f0; }
+    .log-entry { margin: 2px 0; }
+    .log-entry.error { color: #f88; }
+    .log-entry.success { color: #0f0; font-weight: bold; }
+    .log-entry.warning { color: #ff0; }
+    .log-entry.info { color: #0ff; }
+    h2 { color: #0f0; text-shadow: 0 0 10px #0f0; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔌 Socket.IO Connection Debugger</h1>
+    <p>Debug why calls aren't reaching the other user</p>
+
+    <div class="box">
+      <h2>Connection Info</h2>
+      <input type="text" id="serverUrl" value="http://localhost:3001" placeholder="Server URL">
+      <input type="password" id="token" placeholder="Your JWT Token">
+      <input type="text" id="chatId" placeholder="Chat ID">
+      <button onclick="connect()">🔌 Connect</button>
+      <button onclick="disconnect()" class="danger">❌ Disconnect</button>
+      <button onclick="getInfo()">📊 Get My Info</button>
+    </div>
+
+    <div id="status" class="status">Not connected</div>
+
+    <div class="box">
+      <h2>My Info</h2>
+      <div id="myInfo" style="color: #fff;">
+        Socket ID: <span id="socketId">-</span><br>
+        User ID: <span id="userId">-</span><br>
+        Email: <span id="email">-</span><br>
+        Full Name: <span id="fullName">-</span><br>
+        Rooms Joined: <span id="rooms">-</span>
+      </div>
+    </div>
+
+    <div class="box">
+      <h2>🧪 Test Call Initiation</h2>
+      <input type="text" id="targetUserId" placeholder="Target User ID (optional - auto-detect from chat)">
+      <button onclick="testCall()">📞 Initiate Test Call</button>
+      <button onclick="clearLog()">🗑️ Clear Log</button>
+    </div>
+
+    <div class="box">
+      <h2>📋 Event Log</h2>
+      <div id="log" class="log"></div>
+    </div>
+
+    <div class="box">
+      <h2>💡 Debugging Tips</h2>
+      <div style="color: #fff; line-height: 1.6;">
+        <strong>To test calls:</strong><br>
+        1. Open this page in TWO browser windows<br>
+        2. Connect BOTH with different user tokens<br>
+        3. Use the SAME Chat ID in both<br>
+        4. In Window 1: Click "Initiate Test Call"<br>
+        5. In Window 2: Watch the log for "call:incoming" event<br>
+        <br>
+        <strong>What to check:</strong><br>
+        ✓ Both sockets connected (green status)<br>
+        ✓ Both have valid Socket IDs<br>
+        ✓ Both joined the same chat room<br>
+        ✓ User IDs are different<br>
+        ✓ Chat has both users as participants
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let socket = null;
+    let myUserId = null;
+    let myEmail = null;
+
+    function log(msg, type = 'info') {
+      const logDiv = document.getElementById('log');
+      const time = new Date().toLocaleTimeString();
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.textContent = `[${time}] ${msg}`;
+      logDiv.appendChild(entry);
+      logDiv.scrollTop = logDiv.scrollHeight;
+      console.log(`[${type}] ${msg}`);
+    }
+
+    function updateStatus(msg, type = 'success') {
+      const status = document.getElementById('status');
+      status.textContent = msg;
+      status.className = `status ${type}`;
+    }
+
+    function connect() {
+      const url = document.getElementById('serverUrl').value;
+      const token = document.getElementById('token').value;
+
+      if (!token) {
+        alert('Please enter JWT token');
+        return;
+      }
+
+      log('🔌 Connecting to ' + url, 'info');
+
+      socket = io(url, {
+        auth: { token },
+        transports: ['websocket', 'polling']
+      });
+
+      // Connection events
+      socket.on('connect', () => {
+        log('✅ CONNECTED! Socket ID: ' + socket.id, 'success');
+        updateStatus('✅ Connected - Socket ID: ' + socket.id, 'success');
+        document.getElementById('socketId').textContent = socket.id;
+        getInfo();
+      });
+
+      socket.on('connect_error', (err) => {
+        log('❌ CONNECTION ERROR: ' + err.message, 'error');
+        updateStatus('❌ Connection Error: ' + err.message, 'error');
+      });
+
+      socket.on('disconnect', (reason) => {
+        log('⚠️ DISCONNECTED: ' + reason, 'warning');
+        updateStatus('⚠️ Disconnected: ' + reason, 'warning');
+      });
+
+      // Call events - CRITICAL FOR DEBUGGING
+      socket.on('call:incoming', (data) => {
+        log('📞 INCOMING CALL!!! From: ' + data.callerName + ' (' + data.callerId + ')', 'success');
+        log('   Session ID: ' + data.sessionId, 'success');
+        log('   Call Type: ' + data.callType, 'success');
+        log('   Chat ID: ' + data.chatId, 'success');
+        alert('🔔 INCOMING CALL from ' + data.callerName + '!');
+      });
+
+      socket.on('call:ringing', (data) => {
+        log('📱 Call is ringing... Session: ' + data.sessionId, 'info');
+      });
+
+      socket.on('call:accepted', (data) => {
+        log('✅ Call accepted by: ' + data.acceptedBy, 'success');
+      });
+
+      socket.on('call:rejected', (data) => {
+        log('❌ Call rejected by: ' + data.rejectedBy + ' - Reason: ' + data.reason, 'warning');
+      });
+
+      socket.on('call:missed', (data) => {
+        log('⏰ Call missed - Session: ' + data.sessionId, 'warning');
+      });
+
+      socket.on('call:ended', (data) => {
+        log('📴 Call ended by: ' + data.endedBy + ' - Reason: ' + data.reason, 'info');
+      });
+
+      socket.on('error', (data) => {
+        log('❌ ERROR: ' + JSON.stringify(data), 'error');
+      });
+
+      // User events
+      socket.on('user:online', (data) => {
+        log('👤 User online: ' + data.userId, 'info');
+      });
+
+      socket.on('user:offline', (data) => {
+        log('👤 User offline: ' + data.userId, 'info');
+      });
+
+      // Catch ALL events for debugging
+      socket.onAny((eventName, ...args) => {
+        if (!eventName.startsWith('user:')) {
+          log('📡 Event: ' + eventName + ' - ' + JSON.stringify(args), 'info');
+        }
+      });
+
+      log('Waiting for connection...', 'info');
+    }
+
+    function disconnect() {
+      if (socket) {
+        socket.disconnect();
+        socket = null;
+        updateStatus('Disconnected', 'warning');
+      }
+    }
+
+    async function getInfo() {
+      if (!socket || !socket.connected) {
+        alert('Not connected');
+        return;
+      }
+
+      const url = document.getElementById('serverUrl').value;
+      const token = document.getElementById('token').value;
+
+      try {
+        const res = await fetch(url + '/api/user/me', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+          myUserId = data.data._id;
+          myEmail = data.data.email;
+
+          document.getElementById('userId').textContent = myUserId;
+          document.getElementById('email').textContent = myEmail;
+          document.getElementById('fullName').textContent = data.data.fullName;
+
+          log('✅ Got user info: ' + data.data.fullName + ' (' + myUserId + ')', 'success');
+
+          // Join chat room if chat ID provided
+          const chatId = document.getElementById('chatId').value;
+          if (chatId) {
+            joinChatRoom(chatId);
+          }
+        }
+      } catch (error) {
+        log('❌ Error getting user info: ' + error.message, 'error');
+      }
+    }
+
+    function joinChatRoom(chatId) {
+      if (!socket || !socket.connected) {
+        log('❌ Cannot join room - not connected', 'error');
+        return;
+      }
+
+      log('🚪 Joining chat room: ' + chatId, 'info');
+
+      socket.emit('chat:join', { chatId }, (response) => {
+        log('📥 Chat join response: ' + JSON.stringify(response), 'info');
+      });
+
+      // Update UI
+      document.getElementById('rooms').textContent = 'user:' + myUserId + ', chat:' + chatId;
+    }
+
+    function testCall() {
+      if (!socket || !socket.connected) {
+        alert('Not connected! Click Connect first.');
+        return;
+      }
+
+      const chatId = document.getElementById('chatId').value;
+      if (!chatId) {
+        alert('Please enter Chat ID');
+        return;
+      }
+
+      const targetUserId = document.getElementById('targetUserId').value;
+
+      log('📞 Initiating call...', 'warning');
+      log('   Chat ID: ' + chatId, 'info');
+      log('   Target User: ' + (targetUserId || 'auto-detect from chat'), 'info');
+
+      const payload = {
+        chatId,
+        callType: 'voice'
+      };
+
+      if (targetUserId) {
+        payload.targetUserIds = [targetUserId];
+      }
+
+      socket.emit('call:initiate', payload, (response) => {
+        if (response.success) {
+          log('✅ Call initiated! Session ID: ' + response.sessionId, 'success');
+          log('⏳ Waiting for other user to accept...', 'info');
+        } else {
+          log('❌ Call failed: ' + response.error, 'error');
+        }
+      });
+    }
+
+    function clearLog() {
+      document.getElementById('log').innerHTML = '';
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Quick Check - Users & Chats</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+    .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; }
+    input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px; }
+    button { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 5px; }
+    button:hover { background: #0056b3; }
+    .result { background: #f8f9fa; padding: 15px; margin: 10px 0; border-radius: 4px; border-left: 4px solid #007bff; }
+    .error { border-left-color: #dc3545; background: #f8d7da; }
+    .success { border-left-color: #28a745; background: #d4edda; }
+    pre { background: #000; color: #0f0; padding: 10px; overflow-x: auto; }
+    h3 { margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔍 Quick Check - Users & Chats</h1>
+
+    <div>
+      <h3>1. Enter Your JWT Token</h3>
+      <input type="password" id="token" placeholder="Paste JWT token here">
+      <button onclick="checkEverything()">Check Everything</button>
+    </div>
+
+    <div id="results"></div>
+  </div>
+
+  <script>
+    const serverUrl = 'http://localhost:3001';
+
+    async function checkEverything() {
+      const token = document.getElementById('token').value;
+      const resultsDiv = document.getElementById('results');
+
+      if (!token) {
+        alert('Please enter your JWT token');
+        return;
+      }
+
+      resultsDiv.innerHTML = '<div class="result">Checking... Please wait...</div>';
+
+      let html = '';
+
+      // 1. Check server
+      html += '<h3>1. Server Status</h3>';
+      try {
+        const res = await fetch(`${serverUrl}/api/health`);
+        const data = await res.json();
+        html += `<div class="result success">✅ Server: ${data.message}<br>📊 Database: ${data.database}</div>`;
+      } catch (error) {
+        html += `<div class="result error">❌ Server not responding: ${error.message}</div>`;
+        resultsDiv.innerHTML = html;
+        return;
+      }
+
+      // 2. Check current user
+      html += '<h3>2. Current User Info</h3>';
+      try {
+        const res = await fetch(`${serverUrl}/api/user/me`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          html += `<div class="result success">
+            ✅ Logged in as: <strong>${data.data.fullName}</strong><br>
+            📧 Email: ${data.data.email}<br>
+            🆔 User ID: <code>${data.data._id}</code><br>
+            📊 Status: ${data.data.status}
+          </div>`;
+          window.myUserId = data.data._id;
+        } else {
+          html += `<div class="result error">❌ Authentication failed: ${data.error}</div>`;
+          resultsDiv.innerHTML = html;
+          return;
+        }
+      } catch (error) {
+        html += `<div class="result error">❌ Error: ${error.message}</div>`;
+        resultsDiv.innerHTML = html;
+        return;
+      }
+
+      // 3. Check all users
+      html += '<h3>3. All Users in System</h3>';
+      try {
+        const res = await fetch(`${serverUrl}/api/users`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        console.log('Users response status:', res.status);
+        const text = await res.text();
+        console.log('Users response:', text);
+
+        let data;
+        try {
+          data = JSON.parse(text);
+        } catch (e) {
+          html += `<div class="result error">❌ Server returned invalid JSON:<pre>${text.substring(0, 500)}</pre></div>`;
+          resultsDiv.innerHTML = html;
+          return;
+        }
+
+        if (data.success) {
+          html += `<div class="result success">
+            ✅ Found <strong>${data.data.users.length}</strong> other user(s)<br><br>`;
+
+          if (data.data.users.length > 0) {
+            html += '<strong>Users:</strong><br>';
+            data.data.users.forEach((user, i) => {
+              html += `${i + 1}. ${user.name} (${user.email}) - ID: <code>${user.id}</code><br>`;
+            });
+            window.otherUsers = data.data.users;
+          } else {
+            html += '⚠️ No other users found. Create another user to test calls!';
+          }
+          html += '</div>';
+        } else {
+          html += `<div class="result error">❌ Error: ${data.error}</div>`;
+        }
+      } catch (error) {
+        html += `<div class="result error">❌ Error: ${error.message}</div>`;
+      }
+
+      // 4. Check chats
+      html += '<h3>4. Your Chats</h3>';
+      try {
+        const res = await fetch(`${serverUrl}/api/chats`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        console.log('Chats response status:', res.status);
+        const text = await res.text();
+        console.log('Chats response:', text);
+
+        let data;
+        try {
+          data = JSON.parse(text);
+        } catch (e) {
+          html += `<div class="result error">❌ Server returned invalid JSON (Status ${res.status}):<pre>${text.substring(0, 500)}</pre></div>`;
+          resultsDiv.innerHTML = html;
+          return;
+        }
+
+        if (data.success) {
+          html += `<div class="result success">
+            ✅ Found <strong>${data.data.chats.length}</strong> chat(s)<br><br>`;
+
+          if (data.data.chats.length > 0) {
+            html += '<strong>Chats:</strong><br>';
+            data.data.chats.forEach((chat, i) => {
+              html += `${i + 1}. ${chat.type} chat - ID: <code>${chat._id}</code> (${chat.participants.length} participants)<br>`;
+            });
+            window.myChats = data.data.chats;
+          } else {
+            html += '⚠️ No chats found.<br><br>';
+            if (window.otherUsers && window.otherUsers.length > 0) {
+              html += '<button onclick="createTestChat()">Create Test Chat with First User</button>';
+            }
+          }
+          html += '</div>';
+        } else {
+          html += `<div class="result error">❌ Error: ${data.error}</div>`;
+        }
+      } catch (error) {
+        html += `<div class="result error">❌ Error: ${error.message}</div>`;
+      }
+
+      // 5. Instructions
+      html += '<h3>5. Next Steps</h3>';
+      html += '<div class="result">';
+
+      if (window.myChats && window.myChats.length > 0) {
+        html += `
+          ✅ <strong>You're ready to test calls!</strong><br><br>
+          <strong>To test WebRTC:</strong><br>
+          1. Open <code>debug-calls.html</code> in TWO browser windows<br>
+          2. Window 1: Use your current token, Chat ID: <code>${window.myChats[0]._id}</code><br>
+          3. Window 2: Login as another user, use same Chat ID<br>
+          4. Click "Connect" in both windows<br>
+          5. Window 1: Click "Initiate Call"<br>
+          6. Window 2: Should see incoming call!
+        `;
+      } else if (window.otherUsers && window.otherUsers.length > 0) {
+        html += `
+          ⚠️ You need to create a chat first.<br><br>
+          <button onclick="createTestChat()">Create Chat with ${window.otherUsers[0].name}</button>
+        `;
+      } else {
+        html += `
+          ⚠️ You need another user to test calls.<br><br>
+          <strong>Create another user:</strong><br>
+          1. Open incognito window<br>
+          2. Go to your signup page<br>
+          3. Create second user<br>
+          4. Then run this check again
+        `;
+      }
+
+      html += '</div>';
+
+      resultsDiv.innerHTML = html;
+    }
+
+    async function createTestChat() {
+      const token = document.getElementById('token').value;
+      const otherUserId = window.otherUsers[0].id;
+
+      try {
+        const res = await fetch(`${serverUrl}/api/chats`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            type: 'individual',
+            participantIds: [otherUserId]
+          })
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+          alert('✅ Chat created! Chat ID: ' + data.data.chat._id);
+          checkEverything(); // Refresh
+        } else {
+          alert('❌ Error: ' + data.error);
+        }
+      } catch (error) {
+        alert('❌ Error: ' + error.message);
+      }
+    }
+  </script>
+</body>
+</html>
