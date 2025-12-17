@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-export const dynamic = 'force-dynamic';
 import connectDB from '@/lib/mongodb';
 import Label from '@/models/Label';
 import { withAuthAndUser } from '@/middleware/auth';
+
+export const dynamic = 'force-dynamic';
 
 // GET /api/labels - Get all labels for the authenticated user
 export async function GET(request: NextRequest) {

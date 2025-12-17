@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-export const dynamic = 'force-dynamic';
 import connectDB from '@/lib/mongodb';
 import Chat from '@/models/Chat';
 import Message from '@/models/Message';
 import { withAuthAndUser } from '@/middleware/auth';
+
+export const dynamic = 'force-dynamic';
 
 interface RouteParams {
   params: { chatId: string };

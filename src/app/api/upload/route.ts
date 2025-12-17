@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-export const dynamic = 'force-dynamic';
 import { writeFile, mkdir } from 'fs/promises';
 import { existsSync } from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { withAuthAndUser } from '@/middleware/auth';
+
+export const dynamic = 'force-dynamic';
 
 // Upload directory configuration
 const UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads');

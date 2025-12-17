@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-export const dynamic = 'force-dynamic';
 import connectDB from '@/lib/mongodb';
 import Label from '@/models/Label';
 import Chat from '@/models/Chat';
 import { withAuthAndUser } from '@/middleware/auth';
 import mongoose from 'mongoose';
+
+export const dynamic = 'force-dynamic';
 
 interface RouteParams {
   params: { labelId: string };

@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-export const dynamic = 'force-dynamic';
 import connectDB from '@/lib/mongodb';
-import '@/models'; 
+import '@/models';
 import Chat from '@/models/Chat';
 import User from '@/models/User';
 import { withAuthAndUser } from '@/middleware/auth';
 import mongoose from 'mongoose';
+
+export const dynamic = 'force-dynamic';
 
 // GET /api/chats - Get all chats for the authenticated user
 export async function GET(request: NextRequest) {
@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           { success: false, error: 'One or more participants not found' },
           { status: 400 }
-          
+
         );
       }
 

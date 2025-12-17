@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-export const dynamic = 'force-dynamic';
 import connectDB from '@/lib/mongodb';
 import CallSession from '@/models/CallSession';
 import { withAuthAndUser } from '@/middleware/auth';
+
+export const dynamic = 'force-dynamic';
 
 // GET /api/calls/[id] - Get specific call details
 export async function GET(
