@@ -7,6 +7,8 @@ import { formatUserResponse } from '@/utils/helpers';
 import { googleAuthSchema } from '@/lib/validation';
 import { ApiResponse, UserResponse } from '@/types';
 
+export const dynamic = 'force-dynamic';
+
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 export async function POST(request: NextRequest): Promise<NextResponse<ApiResponse<UserResponse>>> {

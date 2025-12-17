@@ -5,6 +5,8 @@ import { signToken, setAuthCookie } from '@/lib/jwt';
 import { getFrontendUrl, formatUserResponse } from '@/utils/helpers';
 import { ApiResponse, UserResponse } from '@/types';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest): Promise<NextResponse<ApiResponse> | Response> {
   try {
     const { searchParams } = new URL(request.url);

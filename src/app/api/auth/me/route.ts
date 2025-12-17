@@ -5,6 +5,8 @@ import { getAuthenticatedUser } from '@/lib/jwt';
 import { formatUserResponse } from '@/utils/helpers';
 import { ApiResponse, UserResponse } from '@/types';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest): Promise<NextResponse<ApiResponse<UserResponse>>> {
   try {
     // Debugging: log incoming origin and cookie header so we can see whether

@@ -6,6 +6,8 @@ import { formatUserResponse, generateOTPFromToken } from '@/utils/helpers';
 import { ApiResponse, UserResponse } from '@/types';
 import { z } from 'zod';
 
+export const dynamic = 'force-dynamic';
+
 const verifyOtpSchema = z.object({
   email: z.string().email('Please enter a valid email').toLowerCase().trim(),
   otp: z.string().length(6, 'OTP must be 6 digits'),

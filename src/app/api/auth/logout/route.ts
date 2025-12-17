@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { removeAuthCookie } from '@/lib/jwt';
 import { ApiResponse } from '@/types';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(): Promise<NextResponse<ApiResponse>> {
   try {
     await removeAuthCookie();

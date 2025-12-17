@@ -6,6 +6,8 @@ import { sendEmail, generateVerificationEmail } from '@/lib/email';
 import { generateToken, getBaseUrl } from '@/utils/helpers';
 import { ApiResponse } from '@/types';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(): Promise<NextResponse<ApiResponse>> {
   try {
     const tokenPayload = await getAuthenticatedUser();

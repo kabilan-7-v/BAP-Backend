@@ -6,6 +6,8 @@ import { loginSchema } from '@/lib/validation';
 import { formatUserResponse } from '@/utils/helpers';
 import { ApiResponse, UserResponse } from '@/types';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest): Promise<NextResponse<ApiResponse<UserResponse>>> {
   try {
     await connectDB();
