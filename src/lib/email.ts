@@ -103,7 +103,11 @@ export function generateOtpEmail(name: string, otp: string, magicLinkUrl?: strin
   `;
 }
 
-export function generateMagicLinkEmail(name: string, magicLinkUrl: string): string {
+export function generateMagicLinkEmail(name: string, magicLinkUrl: string, isNewUser: boolean = false): string {
+  const greeting = isNewUser
+    ? `Thank you for signing up for BAP Workspace. Click the magic link below to complete your signup and sign in instantly:`
+    : `Welcome back to BAP Workspace! Click the magic link below to sign in instantly:`;
+
   return `
     <!DOCTYPE html>
     <html>
@@ -117,7 +121,7 @@ export function generateMagicLinkEmail(name: string, magicLinkUrl: string): stri
         <h1 style="color: white; margin: 0; font-size: 28px;">BAP Workspace</h1>
       </div>
       <div style="background: #ffffff; padding: 40px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 10px 10px;">
-        <p style="color: #666;">Thank you for signing up for BAP Workspace. Click the magic link below to sign in instantly:</p>
+        <p style="color: #666;">${greeting}</p>
         <div style="text-align: center; margin: 30px 0;">
           <a href="${magicLinkUrl}" style="display: inline-block; background: linear-gradient(135deg, #BA6675 0%, #95739F 100%); color: white; padding: 14px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">Magic Link</a>
         </div>

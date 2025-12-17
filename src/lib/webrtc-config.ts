@@ -100,8 +100,6 @@ export const peerConnectionConfig = {
 export const offerOptions: RTCOfferOptions = {
   offerToReceiveAudio: true,
   offerToReceiveVideo: false, // Set to true for video calls
-  voiceActivityDetection: true,
-  iceRestart: false,
 };
 
 /**
