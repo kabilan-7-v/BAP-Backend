@@ -5,6 +5,7 @@ import Message from '@/models/Message';
 import { withAuthAndUser } from '@/middleware/auth';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 // GET /api/messages/search - Search messages across all user's chats
 export async function GET(request: NextRequest) {

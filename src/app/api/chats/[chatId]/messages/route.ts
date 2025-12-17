@@ -5,6 +5,7 @@ import Message from '@/models/Message';
 import { withAuthAndUser } from '@/middleware/auth';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 interface RouteParams {
   params: { chatId: string };

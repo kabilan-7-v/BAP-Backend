@@ -8,6 +8,7 @@ import { generateToken, formatUserResponse, getBaseUrl } from '@/utils/helpers';
 import { ApiResponse, UserResponse } from '@/types';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest): Promise<NextResponse<ApiResponse<UserResponse>>> {
   try {

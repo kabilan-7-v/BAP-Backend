@@ -7,6 +7,7 @@ import { withAuthAndUser } from '@/middleware/auth';
 import mongoose from 'mongoose';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 // GET /api/chats - Get all chats for the authenticated user
 export async function GET(request: NextRequest) {

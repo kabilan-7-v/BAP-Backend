@@ -6,6 +6,7 @@ import { withAuthAndUser } from '@/middleware/auth';
 import mongoose from 'mongoose';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 interface RouteParams {
   params: { labelId: string };

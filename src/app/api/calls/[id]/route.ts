@@ -4,6 +4,7 @@ import CallSession from '@/models/CallSession';
 import { withAuthAndUser } from '@/middleware/auth';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 // GET /api/calls/[id] - Get specific call details
 export async function GET(

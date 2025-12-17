@@ -3,6 +3,7 @@ import { withAuthAndUser } from '@/middleware/auth';
 import { getAuthCookie } from '@/lib/jwt';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 // GET /api/auth/socket-token - Get existing JWT for WebSocket authentication
 export async function GET(request: NextRequest) {

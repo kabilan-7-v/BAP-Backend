@@ -4,6 +4,7 @@ import User from '@/models/User';
 import { withAuthAndUser } from '@/middleware/auth';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 // GET /api/users - Get all users (for chat creation)
 export async function GET(request: NextRequest) {

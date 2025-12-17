@@ -7,6 +7,7 @@ import { generateToken, getBaseUrl } from '@/utils/helpers';
 import { ApiResponse } from '@/types';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 export async function POST(): Promise<NextResponse<ApiResponse>> {
   try {

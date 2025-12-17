@@ -8,6 +8,7 @@ import { googleAuthSchema } from '@/lib/validation';
 import { ApiResponse, UserResponse } from '@/types';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 

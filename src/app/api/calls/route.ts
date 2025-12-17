@@ -5,6 +5,7 @@ import Chat from '@/models/Chat';
 import { withAuthAndUser } from '@/middleware/auth';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 // GET /api/calls - Get call history
 export async function GET(request: NextRequest) {

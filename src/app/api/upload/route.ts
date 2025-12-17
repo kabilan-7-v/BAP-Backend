@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { withAuthAndUser } from '@/middleware/auth';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 // Upload directory configuration
 const UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads');

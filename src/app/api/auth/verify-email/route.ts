@@ -6,6 +6,7 @@ import { getFrontendUrl, formatUserResponse } from '@/utils/helpers';
 import { ApiResponse, UserResponse } from '@/types';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 export async function GET(request: NextRequest): Promise<NextResponse<ApiResponse> | Response> {
   try {

@@ -7,6 +7,7 @@ import { ApiResponse, UserResponse } from '@/types';
 import { z } from 'zod';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 const verifyOtpSchema = z.object({
   email: z.string().email('Please enter a valid email').toLowerCase().trim(),

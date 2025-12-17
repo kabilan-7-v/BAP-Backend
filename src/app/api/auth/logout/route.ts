@@ -3,6 +3,7 @@ import { removeAuthCookie } from '@/lib/jwt';
 import { ApiResponse } from '@/types';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 export async function POST(): Promise<NextResponse<ApiResponse>> {
   try {

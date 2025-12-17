@@ -4,6 +4,7 @@ import Label from '@/models/Label';
 import { withAuthAndUser } from '@/middleware/auth';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 // GET /api/labels - Get all labels for the authenticated user
 export async function GET(request: NextRequest) {
