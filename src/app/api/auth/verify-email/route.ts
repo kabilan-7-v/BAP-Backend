@@ -59,7 +59,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
     const response = NextResponse.redirect(redirectUrl);
 
     // Set auth cookie
-    response.cookies.set('auth_token', jwtToken, {
+    response.cookies.set('auth-token', jwtToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',

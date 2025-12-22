@@ -3,7 +3,7 @@ import { cookies } from 'next/headers';
 
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || 'fallback-secret');
 const TOKEN_EXPIRY = '7d';
-const COOKIE_NAME = 'auth_token';
+const COOKIE_NAME = 'auth-token';
 
 export interface TokenPayload extends JWTPayload {
   userId: string;

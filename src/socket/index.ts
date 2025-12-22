@@ -5,6 +5,10 @@ import User from '../models/User';
 import Chat from '../models/Chat';
 import Message from '../models/Message';
 import mongoose from 'mongoose';
+import { initializeInputAgentSocketHandlers } from './input-agent-handlers';
+import { initializeVideoCallHandlers } from './video-call-handlers';
+import { CallManager } from '../utils/callManager';
+import { getWebRTCConfig, voiceOfferOptions, videoOfferOptions } from '../lib/webrtc-config';
 
 interface AuthenticatedSocket extends Socket {
   userId?: string;
@@ -18,6 +22,9 @@ const userSockets = new Map<string, Set<string>>();
 
 export function initializeSocketHandlers(io: SocketIOServer) {
   console.log('Socket.IO handlers initialized');
+
+  // Create CallManager instance for managing call sessions
+  const callManager = new CallManager(io);
 
   // Authentication middleware
   io.use(async (socket: AuthenticatedSocket, next) => {
@@ -394,6 +401,12 @@ export function initializeSocketHandlers(io: SocketIOServer) {
       }
     });
   });
+
+  // Initialize Input Agent socket handlers for voice/text streaming
+  initializeInputAgentSocketHandlers(io);
+
+  // Initialize Video Call socket handlers
+  initializeVideoCallHandlers(io, callManager);
 
   return io;
 }

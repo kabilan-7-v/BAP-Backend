@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: bap-socket-server
+    runtime: node
+    buildCommand: npm install && npx tsc
+    startCommand: npm start
+    envVars:
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: FRONTEND_URL
+        sync: false

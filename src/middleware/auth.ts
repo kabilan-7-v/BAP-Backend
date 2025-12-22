@@ -14,7 +14,7 @@ export async function withAuth(
 ): Promise<NextResponse> {
   try {
     // Get token from cookie
-    const token = request.cookies.get('auth_token')?.value;
+    const token = request.cookies.get('auth-token')?.value;
 
     if (!token) {
       return NextResponse.json(
@@ -61,7 +61,7 @@ export async function withAuthAndUser(
 ): Promise<NextResponse> {
   try {
     // Get token from cookie
-    const token = request.cookies.get('auth_token')?.value;
+    const token = request.cookies.get('auth-token')?.value;
 
     if (!token) {
       return NextResponse.json(

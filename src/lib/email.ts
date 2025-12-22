@@ -6,75 +6,116 @@ interface EmailOptions {
   html: string;
 }
 
+// Check if we should use Resend API (recommended for Vercel/cloud platforms)
+const useResend = !!process.env.RESEND_API_KEY;
+
+// SMTP transporter for local development or non-Vercel platforms
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || 'smtp.gmail.com',
   port: parseInt(process.env.SMTP_PORT || '587'),
-  secure: process.env.SMTP_PORT === '465', // true for 465, false for other ports
+  secure: process.env.SMTP_PORT === '465',
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
   },
-  // Increased timeouts for cloud platforms
-  connectionTimeout: 30000, // 30 seconds
+  connectionTimeout: 30000,
   greetingTimeout: 30000,
   socketTimeout: 30000,
-  // Pool settings
   pool: true,
   maxConnections: 5,
   maxMessages: 100,
-  // Additional Gmail-specific settings
   requireTLS: true,
   tls: {
-    // Do not fail on invalid certs
     rejectUnauthorized: false,
     minVersion: 'TLSv1.2',
   },
-  // Debug for troubleshooting
   debug: process.env.NODE_ENV !== 'production',
   logger: process.env.NODE_ENV !== 'production',
 });
 
+// Send email via Resend API (works on Vercel - no SMTP port blocking)
+async function sendViaResend({ to, subject, html }: EmailOptions): Promise<boolean> {
+  try {
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: process.env.EMAIL_FROM || 'BAP Workspace <onboarding@resend.dev>',
+        to: [to],
+        subject,
+        html,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      console.error('Resend API error:', error);
+      return false;
+    }
+
+    const data = await response.json();
+    console.log('Email sent via Resend:', data.id);
+    return true;
+  } catch (error) {
+    console.error('Resend email error:', error);
+    return false;
+  }
+}
+
+// Send email via SMTP (nodemailer)
+async function sendViaSMTP({ to, subject, html }: EmailOptions): Promise<boolean> {
+  let lastError;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      console.log(`Sending email to ${to} (attempt ${attempt}/3)...`);
+
+      const info = await transporter.sendMail({
+        from: process.env.EMAIL_FROM || 'BAP Workspace <noreply@bap.com>',
+        to,
+        subject,
+        html,
+      });
+
+      console.log('Email sent successfully to:', to);
+      console.log('Message ID:', info.messageId);
+      return true;
+    } catch (error: any) {
+      lastError = error;
+      console.error(`Email attempt ${attempt} failed:`, error.message);
+
+      if (attempt < 3 && (error.code === 'ETIMEDOUT' || error.code === 'ECONNECTION')) {
+        console.log(`Waiting 2 seconds before retry...`);
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+    }
+  }
+
+  console.error('All SMTP attempts failed:', lastError);
+  return false;
+}
+
 export async function sendEmail({ to, subject, html }: EmailOptions): Promise<boolean> {
   try {
-    // Check if email is configured
-    if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+    // Check if any email provider is configured
+    if (!process.env.RESEND_API_KEY && !process.env.SMTP_USER) {
       console.log('Email not configured. Logging email content:');
       console.log('To:', to);
       console.log('Subject:', subject);
-      console.log('HTML:', html);
       return true; // Return true for development
     }
 
-    // Retry logic: try up to 3 times
-    let lastError;
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      try {
-        console.log(`Sending email to ${to} (attempt ${attempt}/3)...`);
-
-        const info = await transporter.sendMail({
-          from: process.env.EMAIL_FROM || 'BAP Workspace <noreply@bap.com>',
-          to,
-          subject,
-          html,
-        });
-
-        console.log('Email sent successfully to:', to);
-        console.log('Message ID:', info.messageId);
-        return true;
-      } catch (error: any) {
-        lastError = error;
-        console.error(`Email attempt ${attempt} failed:`, error.message);
-
-        // If it's a timeout or connection error, wait before retrying
-        if (attempt < 3 && (error.code === 'ETIMEDOUT' || error.code === 'ECONNECTION')) {
-          console.log(`Waiting 2 seconds before retry...`);
-          await new Promise(resolve => setTimeout(resolve, 2000));
-        }
-      }
+    // Use Resend API if available (recommended for Vercel)
+    if (useResend) {
+      console.log('Using Resend API to send email...');
+      return await sendViaResend({ to, subject, html });
     }
 
-    console.error('All email send attempts failed:', lastError);
-    return false;
+    // Fall back to SMTP
+    console.log('Using SMTP to send email...');
+    return await sendViaSMTP({ to, subject, html });
   } catch (error) {
     console.error('Error sending email:', error);
     return false;

@@ -95,12 +95,25 @@ export const peerConnectionConfig = {
 };
 
 /**
- * SDP constraints for offer/answer
+ * SDP constraints for offer/answer - Voice calls
  */
-export const offerOptions: RTCOfferOptions = {
+export const voiceOfferOptions: RTCOfferOptions = {
   offerToReceiveAudio: true,
-  offerToReceiveVideo: false, // Set to true for video calls
+  offerToReceiveVideo: false,
 };
+
+/**
+ * SDP constraints for offer/answer - Video calls
+ */
+export const videoOfferOptions: RTCOfferOptions = {
+  offerToReceiveAudio: true,
+  offerToReceiveVideo: true,
+};
+
+/**
+ * Legacy offerOptions (for backward compatibility)
+ */
+export const offerOptions: RTCOfferOptions = voiceOfferOptions;
 
 /**
  * Call timeouts (in milliseconds)
